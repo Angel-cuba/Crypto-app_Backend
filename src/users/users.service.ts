@@ -1,7 +1,12 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreateUserRequest } from './dto/request/create-user-request';
 import { UsersRepository } from './user.repository';
-import { hash } from 'bcrypt';
+import { hash, compare } from 'bcrypt';
 import { User } from './models/Users';
 import { UserResponse } from './dto/response/user-response.dto';
 
@@ -38,5 +43,25 @@ export class UsersService {
         'This email is already in use, please try again',
       );
     }
+  }
+  //Method to validate user by  email and password
+  async validateUserByEmailAndPassword(
+    email: string,
+    password: string,
+  ): Promise<UserResponse> {
+    const user = await this.usersRepository.findUserByEmail(email);
+    if (!user) {
+      throw new NotFoundException(`User doesn't exist by email ${email}`);
+    }
+    // const isPasswordValid = await user.validatePassword(password);
+    // if (!isPasswordValid) {
+    //   throw new BadRequestException('Invalid email or password');
+    // }
+    const isPasswordValid = await compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid password');
+    }
+
+    return this.buildResponse(user);
   }
 }
